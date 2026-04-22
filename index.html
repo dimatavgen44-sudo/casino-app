@@ -3,81 +3,94 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org"></script>
     <style>
-        :root { --gold: #f1c40f; --bg: #0f0f0f; --card: #1a1a1a; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
-        .header { display: flex; justify-content: space-between; padding: 15px; background: var(--card); border-bottom: 1px solid #333; }
-        .balance { background: #262626; padding: 5px 12px; border-radius: 10px; display: flex; align-items: center; gap: 8px; }
+        :root { --gold: #f1c40f; --bg: #000; --card: #1c1c1e; --green: #34c759; --red: #ff3b30; }
+        body { background: var(--bg); color: white; font-family: -apple-system, system-ui, sans-serif; margin: 0; padding-bottom: 20px; }
         
-        .screen { display: none; padding: 20px; height: 90vh; overflow-y: auto; }
+        /* Фиксированная шапка */
+        .header { display: flex; justify-content: space-between; padding: 15px 20px; background: var(--card); border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 100; }
+        .bal-box { background: #2c2c2e; padding: 8px 15px; border-radius: 20px; font-weight: bold; display: flex; align-items: center; gap: 8px; font-size: 18px; }
+        .add-btn { background: var(--gold); color: black; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 20px; font-weight: bold; cursor: pointer; }
+
+        /* Крупное меню */
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; }
+        .menu-btn { background: var(--card); border-radius: 20px; padding: 30px; border: 1px solid #333; text-align: left; display: flex; align-items: center; gap: 20px; text-decoration: none; color: white; transition: 0.1s; }
+        .menu-btn:active { transform: scale(0.97); background: #2c2c2e; }
+        .menu-btn .icon { font-size: 40px; }
+        .menu-btn .info { display: flex; flex-direction: column; }
+        .menu-btn .title { font-size: 22px; font-weight: bold; }
+        .menu-btn .desc { color: #888; font-size: 14px; }
+
+        /* Игровые экраны */
+        .screen { display: none; padding: 20px; }
         .active { display: block; }
+        .game-title { font-size: 30px; margin-bottom: 10px; color: var(--gold); }
 
-        /* Меню */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .card { background: var(--card); border-radius: 20px; padding: 25px 10px; border: 1px solid #333; text-align: center; }
+        /* Специфика игр */
+        .input-box { background: var(--card); padding: 20px; border-radius: 20px; margin-bottom: 20px; }
+        input { background: #2c2c2e; border: 1px solid #444; color: white; width: 100%; padding: 15px; border-radius: 12px; font-size: 18px; text-align: center; box-sizing: border-box; }
+        .main-btn { background: var(--gold); color: black; border: none; width: 100%; padding: 20px; border-radius: 15px; font-size: 20px; font-weight: bold; cursor: pointer; }
         
-        /* Мины 5x5 */
-        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 20px 0; }
-        .cell { aspect-ratio: 1; background: #333; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .cell.open { background: #444; }
-        .cell.gem { background: #27ae60; }
-        .cell.bomb { background: #e74c3c; }
+        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+        .cell { aspect-ratio: 1; background: #2c2c2e; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 25px; }
 
-        /* Ракета */
-        .rocket-box { height: 150px; position: relative; background: #000; overflow: hidden; border-radius: 10px; }
-        .rocket-img { position: absolute; bottom: 10px; left: 10px; font-size: 40px; transition: 0.1s; }
-
-        /* Слот */
-        .slot-machine { display: flex; justify-content: center; gap: 10px; font-size: 50px; margin: 20px 0; background: #222; padding: 20px; border-radius: 15px; }
-
-        input[type="number"] { width: 80%; padding: 10px; border-radius: 10px; border: none; margin: 10px 0; background: #333; color: white; text-align: center; }
-        .btn { background: var(--gold); color: black; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .back-btn { margin-top: 20px; color: #888; border: none; background: none; font-size: 16px; cursor: pointer; display: block; width: 100%; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div style="font-weight: 800; color: var(--gold);">STAR CASINO</div>
-        <div class="balance"><span id="bal">0</span> ⭐ <button onclick="tg.sendData('deposit')" style="background:var(--gold); border:none; border-radius:5px; margin-left:5px;">+</button></div>
+        <div style="font-size: 22px; font-weight: bold;">🎰 STAR CASINO</div>
+        <div class="bal-box">
+            <span id="balance-display">0</span> ⭐
+            <button class="add-btn" onclick="sendToBot('deposit')">+</button>
+        </div>
     </div>
 
     <!-- МЕНЮ -->
-    <div id="m-menu" class="screen active">
-        <div class="grid">
-            <div class="card" onclick="show('m-mines')">💣<br>МИНЫ</div>
-            <div class="card" onclick="show('m-rocket')">🚀<br>РАКЕТА</div>
-            <div class="card" onclick="show('m-slots')">🎰<br>СЛОТЫ</div>
-            <div class="card" onclick="show('m-rolls')">🎡<br>РОЛЛС</div>
+    <div id="scr-menu" class="screen active">
+        <div class="menu-grid">
+            <div class="menu-btn" onclick="show('scr-mines')">
+                <span class="icon">💣</span>
+                <div class="info"><span class="title">МИНЫ</span><span class="desc">Найди 💎 и не подорвись</span></div>
+            </div>
+            <div class="menu-btn" onclick="show('scr-rocket')">
+                <span class="icon">🚀</span>
+                <div class="info"><span class="title">РАКЕТА</span><span class="desc">Успей забрать ⭐ до краша</span></div>
+            </div>
+            <div class="menu-btn" onclick="sendToBot('open_rolls')">
+                <span class="icon">🎡</span>
+                <div class="info"><span class="title">РОЛЛС</span><span class="desc">Игра с другими людьми</span></div>
+            </div>
         </div>
     </div>
 
     <!-- МИНЫ -->
-    <div id="m-mines" class="screen">
-        <h3>МИНЫ 5x5</h3>
-        <input type="number" id="mine-count" value="3" min="1" max="24" placeholder="Кол-во мин">
-        <input type="number" id="mine-bet" value="10" placeholder="Ставка">
-        <div class="mines-grid" id="mines-board"></div>
-        <button class="btn" id="mine-start" onclick="startMines()">ИГРАТЬ</button>
-        <button onclick="show('m-menu')" style="color:#888; background:none; border:none; margin-top:20px;">← НАЗАД</button>
+    <div id="scr-mines" class="screen">
+        <div class="game-title">💣 МИНЫ</div>
+        <div class="input-box">
+            <p>Ставка (⭐):</p>
+            <input type="number" id="mine-bet" value="10">
+            <p>Кол-во мин (1-24):</p>
+            <input type="number" id="mine-count" value="3">
+        </div>
+        <div class="mines-grid" id="m-grid"></div>
+        <button class="main-btn" onclick="playMines()">ИГРАТЬ</button>
+        <button class="back-btn" onclick="show('scr-menu')">← НАЗАД В МЕНЮ</button>
     </div>
 
     <!-- РАКЕТА -->
-    <div id="m-rocket" class="screen">
-        <div class="rocket-box">
-            <div id="rocket" class="rocket-img">🚀</div>
+    <div id="scr-rocket" class="screen">
+        <div class="game-title">🚀 РАКЕТА</div>
+        <div class="input-box">
+            <p>Ставка (⭐):</p>
+            <input type="number" id="rock-bet" value="10">
         </div>
-        <div id="r-mult" style="font-size: 40px; margin: 20px;">1.00x</div>
-        <input type="number" id="rock-bet" value="10">
-        <button class="btn" id="rock-btn" onclick="startRocket()">ВЗЛЕТ</button>
-    </div>
-
-    <!-- СЛОТЫ -->
-    <div id="m-slots" class="screen">
-        <div class="slot-machine" id="slots">❓ ❓ ❓</div>
-        <input type="number" id="slot-bet" value="10">
-        <button class="btn" onclick="spinSlots()">КРУТИТЬ</button>
+        <div style="font-size: 60px; margin: 40px 0;" id="rock-mult">1.00x</div>
+        <button class="main-btn" id="rock-start" onclick="playRocket()">ВЗЛЕТЕТЬ</button>
+        <button class="back-btn" onclick="show('scr-menu')">← НАЗАД В МЕНЮ</button>
     </div>
 
     <script>
@@ -89,51 +102,31 @@
             document.getElementById(id).classList.add('active');
         }
 
-        // --- ЛОГИКА МИН ---
-        let mines = [];
-        function startMines() {
-            const count = document.getElementById('mine-count').value;
-            const bet = document.getElementById('mine-bet').value;
-            const board = document.getElementById('mines-board');
-            board.innerHTML = '';
-            mines = [];
-            for(let i=0; i<25; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.onclick = () => openCell(i, cell);
-                board.appendChild(cell);
-            }
-            tg.sendData(`play_mines_${bet}_${count}`);
-        }
-        function openCell(i, el) { 
-            el.innerHTML = '💎'; el.classList.add('gem'); 
+        function sendToBot(data) {
+            tg.sendData(data);
         }
 
-        // --- ЛОГИКА СЛОТОВ ---
-        function spinSlots() {
-            const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
-            const reels = document.getElementById('slots');
-            const bet = document.getElementById('slot-bet').value;
-            let interval = setInterval(() => {
-                reels.innerHTML = `${symbols[Math.floor(Math.random()*5)]} ${symbols[Math.floor(Math.random()*5)]} ${symbols[Math.floor(Math.random()*5)]}`;
+        function playMines() {
+            let bet = document.getElementById('mine-bet').value;
+            let cnt = document.getElementById('mine-count').value;
+            // Рисуем сетку для вида
+            let grid = document.getElementById('m-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<25; i++) grid.innerHTML += '<div class="cell">❓</div>';
+            sendToBot(`play_mines_${bet}_${cnt}`);
+        }
+
+        function playRocket() {
+            let bet = document.getElementById('rock-bet').value;
+            sendToBot(`play_rocket_${bet}`);
+            // Простая анимация множителя
+            let m = document.getElementById('rock-mult');
+            let val = 1.0;
+            let t = setInterval(() => {
+                val += 0.1;
+                m.innerText = val.toFixed(2) + 'x';
+                if(val > 2.5) clearInterval(t);
             }, 100);
-            setTimeout(() => {
-                clearInterval(interval);
-                tg.sendData(`play_slots_${bet}`);
-            }, 2000);
-        }
-
-        // --- ЛОГИКА РАКЕТЫ ---
-        function startRocket() {
-            let r = document.getElementById('rocket');
-            let m = document.getElementById('mult');
-            let x = 0, y = 0, mult = 1.0;
-            let fly = setInterval(() => {
-                x += 2; y += 1; mult += 0.02;
-                r.style.transform = `translate(${x}px, -${y}px)`;
-                m.innerText = mult.toFixed(2) + 'x';
-                if(mult > 3) { clearInterval(fly); tg.sendData('play_rocket_'+document.getElementById('rock-bet').value); }
-            }, 50);
         }
     </script>
 </body>
