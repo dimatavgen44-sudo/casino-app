@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org"></script>
+    <style>
+        body { background: #1a1a1a; color: white; text-align: center; font-family: 'Segoe UI', sans-serif; padding-top: 30px; }
+        h1 { color: #f1c40f; }
+        .balance-info { margin-bottom: 20px; font-size: 18px; }
+        .btn { 
+            background: linear-gradient(145deg, #f1c40f, #d4ac0d); 
+            border: none; padding: 20px; border-radius: 15px; 
+            width: 85%; font-size: 18px; margin: 10px; 
+            font-weight: bold; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <h1>🎰 STAR CASINO</h1>
+    <div class="balance-info">Выбери сумму ставки:</div>
+    
+    <button class="btn" onclick="send(10)">СТАВКА: 10 ⭐</button>
+    <button class="btn" onclick="send(50)">СТАВКА: 50 ⭐</button>
+    <button class="btn" onclick="send(100)">СТАВКА: 100 ⭐</button>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на всё окно
+
+        function send(amount) {
+            tg.sendData(amount.toString()); // Отправляем боту число
+            tg.close(); // Закрываем приложение
+        }
+    </script>
+</body>
+</html>
