@@ -1,154 +1,118 @@
-<!DOCTYPE html>
+]<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org"></script>
     <style>
-        :root { --gold: #f1c40f; --bg: #0b0b0d; --card: #1c1c1e; --blue: #007aff; }
+        :root { --gold: #ffcc33; --neon: #f1c40f; --bg: #0d0d12; --card: #16161e; }
         body { 
-            background: var(--bg); 
-            background-image: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px);
-            background-size: 550px 550px, 350px 350px; 
-            color: white; font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 30px; 
+            background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0;
+            background-image: radial-gradient(circle at center, #1a1a2e 0%, #0d0d12 100%);
+            overflow-x: hidden;
         }
-        .header { display: flex; justify-content: space-between; padding: 15px 20px; background: rgba(28,28,30,0.9); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; }
-        .bal-box { background: #2c2c2e; padding: 8px 15px; border-radius: 20px; font-weight: bold; display: flex; align-items: center; gap: 8px; font-size: 18px; border: 1px solid var(--gold); }
-        .add-btn { background: var(--gold); color: black; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 20px; font-weight: bold; }
-
-        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; }
-        .menu-btn { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid #333; display: flex; align-items: center; gap: 20px; color: white; transition: 0.1s; text-align: left; }
-        .menu-btn:active { transform: scale(0.96); }
-        .menu-btn .icon { font-size: 45px; }
-        .menu-btn .title { font-size: 22px; font-weight: bold; display: block; }
-        .menu-btn .desc { color: #888; font-size: 14px; }
+        .header { display: flex; justify-content: space-between; padding: 15px 20px; background: rgba(22, 22, 30, 0.9); border-bottom: 2px solid var(--neon); box-shadow: 0 0 15px var(--neon); position: sticky; top: 0; z-index: 100; }
+        .logo-text { font-size: 20px; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px var(--neon); }
+        .bal-box { background: #26262b; padding: 8px 15px; border-radius: 20px; border: 1px solid var(--gold); display: flex; align-items: center; gap: 8px; }
+        
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 20px; }
+        .menu-btn { background: var(--card); border-radius: 20px; padding: 20px; border: 1px solid #333; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        .menu-btn:active { transform: scale(0.96); border-color: var(--neon); }
+        .menu-btn .icon { font-size: 35px; filter: drop-shadow(0 0 5px var(--neon)); }
 
         .screen { display: none; padding: 20px; text-align: center; }
-        .active { display: block; }
-        
-        .input-box { background: var(--card); padding: 20px; border-radius: 20px; margin: 20px 0; border: 1px solid #333; }
-        input { background: #2c2c2e; border: 1px solid #444; color: white; width: 100%; padding: 15px; border-radius: 12px; font-size: 20px; text-align: center; box-sizing: border-box; outline: none; }
-        .main-btn { background: var(--gold); color: black; border: none; width: 100%; padding: 22px; border-radius: 18px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(241, 196, 15, 0.3); }
+        .active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Ракета Фикс */
-        .rocket-area { height: 200px; background: rgba(0,0,0,0.5); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 20px 0; border: 2px dashed #444; }
-        #rock-mult { font-size: 70px; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(241, 196, 15, 0.5); }
+        /* РОЛЛС КОЛЕСО */
+        .rolls-wrap { position: relative; width: 220px; height: 220px; margin: 20px auto; }
+        #rolls-canvas { width: 100%; height: 100%; border-radius: 50%; transform: rotate(-90deg); border: 4px solid #fff; box-shadow: 0 0 20px var(--neon); }
+        .timer-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; border: 2px solid var(--gold); }
+        .arrow { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); color: #ff3b30; font-size: 24px; z-index: 10; }
 
-        /* Слот */
-        .slot-box { font-size: 70px; background: #1c1c1e; padding: 30px; border-radius: 20px; margin: 20px 0; border: 2px solid #333; }
-
-        .back-btn { margin-top: 25px; color: #888; border: none; background: none; font-size: 16px; width: 100%; }
+        .input-box { background: var(--card); padding: 15px; border-radius: 20px; margin: 15px 0; border: 1px solid #333; }
+        input { background: #26262b; border: 1px solid #444; color: white; width: 100%; padding: 12px; border-radius: 12px; font-size: 18px; text-align: center; box-sizing: border-box; }
+        .main-btn { background: linear-gradient(135deg, var(--gold), #d4ac0d); color: black; border: none; width: 100%; padding: 18px; border-radius: 15px; font-size: 20px; font-weight: 900; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div style="font-size: 22px; font-weight: 900; letter-spacing: 1px;">STAR HUB</div>
+        <div class="logo-text">👑 HARD GIFT</div>
         <div class="bal-box">
-            <span id="bal">0</span> <span style="color:var(--gold)">⭐</span>
-            <button class="add-btn" onclick="send('deposit')">+</button>
+            <span id="bal">0</span> ⭐
+            <button onclick="send('deposit')" style="background:var(--gold); border:none; border-radius:50%; width:25px; height:25px; font-weight:bold;">+</button>
         </div>
     </div>
 
-    <!-- МЕНЮ -->
     <div id="scr-menu" class="screen active">
         <div class="menu-grid">
-            <div class="menu-btn" onclick="show('scr-rocket')">
-                <span class="icon">🚀</span>
-                <div class="info"><span class="title">РАКЕТА</span><span class="desc">Множитель до 100x</span></div>
-            </div>
-            <div class="menu-btn" onclick="show('scr-slots')">
-                <span class="icon">🎰</span>
-                <div class="info"><span class="title">СЛОТЫ</span><span class="desc">Классические 777</span></div>
-            </div>
-            <div class="menu-btn" onclick="show('scr-mines')">
-                <span class="icon">💣</span>
-                <div class="info"><span class="title">МИНЫ</span><span class="desc">Выбери кол-во бомб</span></div>
-            </div>
-            <div class="menu-btn" onclick="show('scr-rolls')">
-                <span class="icon">🎡</span>
-                <div class="info"><span class="title">ROLLS</span><span class="desc">Общий банк игроков</span></div>
-            </div>
+            <div class="menu-btn" onclick="show('scr-rolls')"><span class="icon">🎡</span><div><b>РОЛЛС</b><br><small>Общий банк</small></div></div>
+            <div class="menu-btn" onclick="show('scr-rocket')"><span class="icon">🚀</span><div><b>РАКЕТА</b><br><small>Множитель до 100x</small></div></div>
+            <div class="menu-btn" onclick="show('scr-mines')"><span class="icon">💣</span><div><b>МИНЫ</b><br><small>Поле 5х5</small></div></div>
+            <div class="menu-btn" onclick="show('scr-slots')"><span class="icon">🎰</span><div><b>СЛОТЫ</b><br><small>Классика 777</small></div></div>
         </div>
+    </div>
+
+    <!-- ЭКРАН РОЛЛС -->
+    <div id="scr-rolls" class="screen">
+        <h2 style="color:var(--gold)">🎡 ФОРТУНА РОЛЛС</h2>
+        <div class="rolls-wrap">
+            <div class="arrow">▼</div>
+            <canvas id="rolls-canvas" width="400" height="400"></canvas>
+            <div class="timer-center" id="r-timer">00:30</div>
+        </div>
+        <div class="input-box"><input type="number" id="roll-bet" value="10"></div>
+        <button class="main-btn" onclick="playRolls()">СТАВИТЬ В БАНК</button>
+        <button onclick="show('scr-menu')" style="margin-top:15px; background:none; border:none; color:#888;">← Назад</button>
     </div>
 
     <!-- ЭКРАН РАКЕТА -->
     <div id="scr-rocket" class="screen">
-        <h2 style="color:var(--gold)">🚀 CRASH GAME</h2>
-        <div class="rocket-area"><div id="rock-mult">1.00x</div></div>
-        <div class="input-box">
-            <input type="number" id="rock-bet" value="10">
-        </div>
-        <button class="main-btn" id="btn-rock" onclick="startRocket()">ВЗЛЕТЕТЬ</button>
-        <button class="back-btn" onclick="show('scr-menu')">← НАЗАД</button>
-    </div>
-
-    <!-- ЭКРАН СЛОТЫ -->
-    <div id="scr-slots" class="screen">
-        <h2 style="color:var(--gold)">🎰 SLOTS 777</h2>
-        <div class="slot-box" id="slot-reels">❓ ❓ ❓</div>
-        <div class="input-box"><input type="number" id="slot-bet" value="10"></div>
-        <button class="main-btn" id="btn-slot" onclick="startSlots()">КРУТИТЬ</button>
-        <button class="back-btn" onclick="show('scr-menu')">← НАЗАД</button>
-    </div>
-
-    <!-- ЭКРАН ROLLS -->
-    <div id="scr-rolls" class="screen">
-        <h2 style="color:var(--gold)">🎡 ROLLS JACKPOT</h2>
-        <p style="color:#888">Введите сумму ставки для входа в общий банк</p>
-        <div class="input-box"><input type="number" id="rolls-bet" value="10"></div>
-        <button class="main-btn" onclick="send('play_rolls_'+document.getElementById('rolls-bet').value)">ВНЕСТИ В БАНК</button>
-        <button class="back-btn" onclick="show('scr-menu')">← НАЗАД</button>
-    </div>
-
-    <!-- ЭКРАН МИНЫ -->
-    <div id="scr-mines" class="screen">
-        <h2 style="color:var(--gold)">💣 MINES</h2>
-        <div class="input-box">
-            <p>Ставка:</p><input type="number" id="mine-bet" value="10">
-            <p>Кол-во мин (1-24):</p><input type="number" id="mine-cnt" value="3">
-        </div>
-        <button class="main-btn" onclick="send('play_mines_'+document.getElementById('mine-bet').value+'_'+document.getElementById('mine-cnt').value)">ИГРАТЬ</button>
-        <button class="back-btn" onclick="show('scr-menu')">← НАЗАД</button>
+        <h2 style="color:var(--gold)">🚀 РАКЕТА</h2>
+        <div id="rock-val" style="font-size:60px; margin:30px 0; font-weight:900; color:var(--gold); text-shadow:0 0 15px var(--neon);">1.00x</div>
+        <div class="input-box"><input type="number" id="rock-bet" value="10"></div>
+        <button class="main-btn" onclick="startRocket()">ВЗЛЕТ</button>
+        <button onclick="show('scr-menu')" style="margin-top:15px; background:none; border:none; color:#888;">← Назад</button>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-        tg.headerColor = '#1c1c1e';
-
         function show(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            if(id === 'scr-rolls') drawWheel();
+        }
+        function send(d) { tg.sendData(d); }
+
+        function drawWheel() {
+            const ctx = document.getElementById('rolls-canvas').getContext('2d');
+            const colors = ['#4285F4', '#34A853', '#FBBC05', '#EA4335', '#FF69B4'];
+            for(let i=0; i<5; i++) {
+                ctx.fillStyle = colors[i];
+                ctx.beginPath(); ctx.moveTo(200,200);
+                ctx.arc(200,200,200, i*1.25, (i+1)*1.25);
+                ctx.fill();
+            }
         }
 
-        function send(data) { tg.sendData(data); }
+        function playRolls() {
+            let b = document.getElementById('roll-bet').value;
+            send('play_rolls_'+b);
+            let s = 30;
+            let t = setInterval(() => {
+                s--; document.getElementById('r-timer').innerText = "00:" + (s<10?"0":"")+s;
+                if(s<=0) clearInterval(t);
+            }, 1000);
+        }
 
         function startRocket() {
-            let m = document.getElementById('rock-mult');
-            let b = document.getElementById('btn-rock');
-            let bet = document.getElementById('rock-bet').value;
-            let val = 1.00;
-            b.disabled = true;
+            let m = document.getElementById('rock-val'), v = 1.0;
             let t = setInterval(() => {
-                val += 0.03;
-                m.innerText = val.toFixed(2) + 'x';
-                if(val > 2.5) { 
-                    clearInterval(t); 
-                    send('play_rocket_' + bet);
-                    setTimeout(() => { b.disabled = false; m.innerText = '1.00x'; }, 3000);
-                }
+                v += 0.04; m.innerText = v.toFixed(2) + 'x';
+                if(v > 2.5) { clearInterval(t); send('play_rocket_'+document.getElementById('rock-bet').value); }
             }, 50);
-        }
-
-        function startSlots() {
-            let r = document.getElementById('slot-reels');
-            let bet = document.getElementById('slot-bet').value;
-            const i = ['7️⃣','💎','🍒','🍋','🔔'];
-            let t = setInterval(() => {
-                r.innerText = i[Math.floor(Math.random()*5)] + ' ' + i[Math.floor(Math.random()*5)] + ' ' + i[Math.floor(Math.random()*5)];
-            }, 100);
-            setTimeout(() => { clearInterval(t); send('play_slots_' + bet); }, 2000);
         }
     </script>
 </body>
