@@ -1,113 +1,16 @@
-import asyncio
-import sqlite3
-import random
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import LabeledPrice, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.filters import Command
-
-# Твой токен и ссылка
-API_TOKEN = '8756134907:AAGLhZ5Av4Usf4wTN_JGdyb-FPkw-TrrIxw'
-GITHUB_URL = "https://github.io"
-
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
-
-rolls_bank = {}  # {uid: [name, bet]}
-is_running = False
-
-def init_db():
-    conn = sqlite3.connect('casino.db')
-    cursor = conn.cursor()
-    cursor.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, bal INTEGER DEFAULT 0)')
-    conn.commit()
-    conn.close()
-
-def get_bal(uid):
-    conn = sqlite3.connect('casino.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT bal FROM users WHERE id = ?', (uid,))
-    res = cursor.fetchone()
-    conn.close()
-    return res[0] if res else 0
-
-def change_bal(uid, amount):
-    curr = get_bal(uid)
-    conn = sqlite3.connect('casino.db')
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR REPLACE INTO users (id, bal) VALUES (?, ?)', (uid, curr + amount))
-    conn.commit()
-    conn.close()
-
-async def start_game(chat_id):
-    global is_running, rolls_bank
-    await bot.send_message(chat_id, "🎡 **ФОРТУНА HARD GIFT!**\nСбор банка начался. Итоги через 30 сек!")
-    await asyncio.sleep(30)
+function drawWheel(playersData) {
+    let ctx = document.getElementById('wheel').getContext('2d');
+    let totalBet = playersData.reduce((a, b) => a + b.bet, 0);
+    let startAngle = 0;
     
-    if len(rolls_bank) < 2:
-        for uid, data in rolls_bank.items():
-            change_bal(uid, data[1])
-        await bot.send_message(chat_id, "⚠️ Мало игроков. Ставки возвращены.")
-    else:
-        total = sum(d[1] for d in rolls_bank.values())
-        uids = list(rolls_bank.keys())
-        weights = [d[1] for d in rolls_bank.values()]
-        
-        winner_id = random.choices(uids, weights=weights, k=1)[0]
-        winner_name = rolls_bank[winner_id][0]
-        
-        change_bal(winner_id, total)
-        await bot.send_message(chat_id, f"🏆 **ВЕСЬ БАНК ЗАБРАЛ:** {winner_name}!\n💰 Выигрыш: {total} ⭐")
-    
-    rolls_bank = {}
-    is_running = False
-
-@dp.message(F.web_app_data)
-async def handle_app(msg: types.Message):
-    global is_running, rolls_bank
-    data = msg.web_app_data.data
-    uid = msg.from_user.id
-    
-    # Прямой фикс пополнения
-    if data == "deposit":
-        await bot.send_invoice(msg.chat.id, "👑 HARD GIFT", "Пополнение 50 ⭐", "pay", "", "XTR", [LabeledPrice(label="⭐", amount=50)])
-        return
-
-    # Логика Роллс
-    if data.startswith("play_rolls_"):
-        bet = int(data.split("_")[2])
-        if get_bal(uid) < bet:
-            await msg.answer(f"❌ Недостаточно ⭐! Баланс: {get_bal(uid)}")
-            return
-        
-        change_bal(uid, -bet)
-        rolls_bank[uid] = [msg.from_user.full_name, bet]
-        await msg.answer(f"✅ Внесено {bet} ⭐ в банк Фортуны!")
-        
-        if not is_running:
-            is_running = True
-            asyncio.create_task(start_game(msg.chat.id))
-
-@dp.message(Command("start"))
-async def start(msg: types.Message):
-    init_db()
-    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="👑 HARD GIFT APP", web_app=WebAppInfo(url=GITHUB_URL))]], resize_keyboard=True)
-    await msg.answer(f"👑 **HARD GIFT**\nТвой баланс: {get_bal(msg.from_user.id)} ⭐", reply_markup=kb)
-
-@dp.pre_checkout_query()
-async def pre(q: types.PreCheckoutQuery):
-    await bot.answer_pre_checkout_query(q.id, ok=True)
-
-@dp.message(F.successful_payment)
-async def success(msg: types.Message):
-    change_bal(msg.from_user.id, msg.successful_payment.total_amount)
-    await msg.answer("⭐ Зачислено!")
-
-async def main():
-    init_db()
-    await bot.delete_webhook(drop_pending_updates=True)
-    print("--- БОТ ЗАПУЩЕН БЕЗ ОШИБОК ---")
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    playersData.forEach(player => {
+        let sliceAngle = (player.bet / totalBet) * 2 * Math.PI;
+        ctx.fillStyle = player.color;
+        ctx.beginPath();
+        ctx.moveTo(250, 250);
+        ctx.arc(250, 250, 250, startAngle, startAngle + sliceAngle);
+        ctx.fill();
+        startAngle += sliceAngle;
+    });
+}
 
