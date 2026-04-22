@@ -1,97 +1,113 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org"></script>
-    <style>
-        :root { --gold: #ffcc33; --bg: #0d0d12; --neon: #f1c40f; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; text-align: center; }
-        .header { display: flex; justify-content: space-between; padding: 15px; background: #16161e; border-bottom: 2px solid var(--neon); }
-        .bal-box { background: #26262b; padding: 5px 12px; border-radius: 15px; border: 1px solid var(--gold); display: flex; align-items: center; gap: 8px; }
-        .scr { display: none; padding: 20px; }
-        .active { display: block; }
+import asyncio
+import sqlite3
+import random
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import LabeledPrice, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.filters import Command
+
+# Твой токен и ссылка
+API_TOKEN = '8756134907:AAGLhZ5Av4Usf4wTN_JGdyb-FPkw-TrrIxw'
+GITHUB_URL = "https://github.io"
+
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher()
+
+rolls_bank = {}  # {uid: [name, bet]}
+is_running = False
+
+def init_db():
+    conn = sqlite3.connect('casino.db')
+    cursor = conn.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, bal INTEGER DEFAULT 0)')
+    conn.commit()
+    conn.close()
+
+def get_bal(uid):
+    conn = sqlite3.connect('casino.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT bal FROM users WHERE id = ?', (uid,))
+    res = cursor.fetchone()
+    conn.close()
+    return res[0] if res else 0
+
+def change_bal(uid, amount):
+    curr = get_bal(uid)
+    conn = sqlite3.connect('casino.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR REPLACE INTO users (id, bal) VALUES (?, ?)', (uid, curr + amount))
+    conn.commit()
+    conn.close()
+
+async def start_game(chat_id):
+    global is_running, rolls_bank
+    await bot.send_message(chat_id, "🎡 **ФОРТУНА HARD GIFT!**\nСбор банка начался. Итоги через 30 сек!")
+    await asyncio.sleep(30)
+    
+    if len(rolls_bank) < 2:
+        for uid, data in rolls_bank.items():
+            change_bal(uid, data[1])
+        await bot.send_message(chat_id, "⚠️ Мало игроков. Ставки возвращены.")
+    else:
+        total = sum(d[1] for d in rolls_bank.values())
+        uids = list(rolls_bank.keys())
+        weights = [d[1] for d in rolls_bank.values()]
         
-        /* РОЛЛС КОЛЕСО */
-        .wheel-container { position: relative; width: 280px; height: 280px; margin: 20px auto; }
-        #wheel { width: 100%; height: 100%; border-radius: 50%; border: 5px solid white; box-shadow: 0 0 20px var(--neon); transition: transform 4s cubic-bezier(0.1, 0, 0.1, 1); }
-        .timer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border: 2px solid var(--gold); }
-        .arrow { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); color: red; font-size: 35px; z-index: 100; }
+        winner_id = random.choices(uids, weights=weights, k=1)[0]
+        winner_name = rolls_bank[winner_id][0]
+        
+        change_bal(winner_id, total)
+        await bot.send_message(chat_id, f"🏆 **ВЕСЬ БАНК ЗАБРАЛ:** {winner_name}!\n💰 Выигрыш: {total} ⭐")
+    
+    rolls_bank = {}
+    is_running = False
 
-        .btn-plus { background: var(--gold); color: black; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: 900; font-size: 20px; }
-        .btn-huge { background: linear-gradient(135deg, var(--gold), #d4ac0d); color: black; border: none; width: 100%; padding: 25px; border-radius: 20px; font-size: 24px; font-weight: 900; margin-top: 20px; }
-        input { background: #1c1c24; border: 1px solid #444; color: white; width: 100%; padding: 15px; border-radius: 15px; font-size: 22px; text-align: center; box-sizing: border-box; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div style="color:var(--gold); font-weight:900; font-size:22px;">👑 HARD GIFT</div>
-        <div class="bal-box">
-            <span id="bal-txt">0</span> ⭐
-            <button class="btn-plus" onclick="send('deposit')">+</button>
-        </div>
-    </div>
+@dp.message(F.web_app_data)
+async def handle_app(msg: types.Message):
+    global is_running, rolls_bank
+    data = msg.web_app_data.data
+    uid = msg.from_user.id
+    
+    # Прямой фикс пополнения
+    if data == "deposit":
+        await bot.send_invoice(msg.chat.id, "👑 HARD GIFT", "Пополнение 50 ⭐", "pay", "", "XTR", [LabeledPrice(label="⭐", amount=50)])
+        return
 
-    <div id="m-menu" class="scr active">
-        <button class="btn-huge" onclick="show('m-rolls')">🎡 ФОРТУНА (ROLLS)</button>
-        <button class="btn-huge" onclick="show('m-rocket')" style="background:#222; color:#fff; border:1px solid #444;">🚀 РАКЕТА</button>
-    </div>
+    # Логика Роллс
+    if data.startswith("play_rolls_"):
+        bet = int(data.split("_")[2])
+        if get_bal(uid) < bet:
+            await msg.answer(f"❌ Недостаточно ⭐! Баланс: {get_bal(uid)}")
+            return
+        
+        change_bal(uid, -bet)
+        rolls_bank[uid] = [msg.from_user.full_name, bet]
+        await msg.answer(f"✅ Внесено {bet} ⭐ в банк Фортуны!")
+        
+        if not is_running:
+            is_running = True
+            asyncio.create_task(start_game(msg.chat.id))
 
-    <div id="m-rolls" class="scr">
-        <h1 style="color:var(--gold)">Роллс</h1>
-        <div class="wheel-container">
-            <div class="arrow">▼</div>
-            <canvas id="wheel" width="500" height="500"></canvas>
-            <div class="timer" id="timer">00:30</div>
-        </div>
-        <input type="number" id="bet-in" value="10">
-        <button class="btn-huge" onclick="playRolls()">ПОСТАВИТЬ</button>
-        <button onclick="show('m-menu')" style="margin-top:20px; background:none; border:none; color:#888;">← НАЗАД</button>
-    </div>
+@dp.message(Command("start"))
+async def start(msg: types.Message):
+    init_db()
+    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="👑 HARD GIFT APP", web_app=WebAppInfo(url=GITHUB_URL))]], resize_keyboard=True)
+    await msg.answer(f"👑 **HARD GIFT**\nТвой баланс: {get_bal(msg.from_user.id)} ⭐", reply_markup=kb)
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
+@dp.pre_checkout_query()
+async def pre(q: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(q.id, ok=True)
 
-        function show(id) {
-            document.querySelectorAll('.scr').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(id === 'm-rolls') drawWheel();
-        }
+@dp.message(F.successful_payment)
+async def success(msg: types.Message):
+    change_bal(msg.from_user.id, msg.successful_payment.total_amount)
+    await msg.answer("⭐ Зачислено!")
 
-        function send(data) {
-            tg.sendData(data); // Отправляем сигнал боту
-        }
+async def main():
+    init_db()
+    await bot.delete_webhook(drop_pending_updates=True)
+    print("--- БОТ ЗАПУЩЕН БЕЗ ОШИБОК ---")
+    await dp.start_polling(bot)
 
-        function drawWheel() {
-            const ctx = document.getElementById('wheel').getContext('2d');
-            const colors = ['#4285F4', '#FBBC05', '#34A853', '#EA4335'];
-            let start = 0;
-            [0.25, 0.25, 0.25, 0.25].forEach((p, i) => {
-                ctx.fillStyle = colors[i];
-                ctx.beginPath(); ctx.moveTo(250, 250);
-                ctx.arc(250, 250, 250, start, start + (Math.PI * 2 * p));
-                ctx.fill();
-                start += (Math.PI * 2 * p);
-            });
-        }
-
-        function playRolls() {
-            let b = document.getElementById('bet-in').value;
-            const wheel = document.getElementById('wheel');
-            let deg = Math.floor(Math.random() * 500) + 2000;
-            wheel.style.transform = `rotate(${deg}deg)`;
-            
-            send("play_rolls_" + b);
-            
-            let s = 30;
-            let t = setInterval(() => {
-                s--;
-                document.getElementById('timer').innerText = "00:" + (s < 10 ? "0" : "") + s;
-                if(s <= 0) clearInterval(t);
-            }, 1000);
-        }
-    </script>
-</body>
-</html>
+if __name__ == "__main__":
+    asyncio.run(main())
 
