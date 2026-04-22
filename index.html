@@ -3,35 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://telegram.org"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #1a1a1a; color: white; text-align: center; font-family: 'Segoe UI', sans-serif; padding-top: 30px; }
-        h1 { color: #f1c40f; }
-        .balance-info { margin-bottom: 20px; font-size: 18px; }
-        .btn { 
-            background: linear-gradient(145deg, #f1c40f, #d4ac0d); 
-            border: none; padding: 20px; border-radius: 15px; 
-            width: 85%; font-size: 18px; margin: 10px; 
-            font-weight: bold; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .btn:active { transform: scale(0.98); }
+        body { background: #1a1a1a; color: white; text-align: center; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #222; border-radius: 10px; width: 90%; height: 200px; margin-top: 20px; }
+        .multiplier { font-size: 48px; color: #f1c40f; margin: 20px 0; font-weight: bold; }
+        .btn { background: #27ae60; color: white; border: none; padding: 20px; border-radius: 15px; width: 80%; font-size: 20px; font-weight: bold; }
+        .btn.wait { background: #e67e22; }
+        .history { display: flex; justify-content: center; gap: 5px; margin-top: 15px; flex-wrap: wrap; }
+        .h-item { background: #444; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
-    <h1>🎰 STAR CASINO</h1>
-    <div class="balance-info">Выбери сумму ставки:</div>
+    <h1>🚀 ROCKET CRASH</h1>
+    <canvas id="gameCanvas"></canvas>
+    <div class="multiplier" id="mult">1.00x</div>
     
-    <button class="btn" onclick="send(10)">СТАВКА: 10 ⭐</button>
-    <button class="btn" onclick="send(50)">СТАВКА: 50 ⭐</button>
-    <button class="btn" onclick="send(100)">СТАВКА: 100 ⭐</button>
+    <button id="mainBtn" class="btn" onclick="action()">СТАВКА 10 ⭐</button>
+    
+    <div class="history" id="history">
+        <!-- Сюда будет падать история полетов -->
+    </div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на всё окно
+        tg.expand();
 
-        function send(amount) {
-            tg.sendData(amount.toString()); // Отправляем боту число
-            tg.close(); // Закрываем приложение
+        let isFlying = false;
+        let currentMult = 1.0;
+        let crashPoint = 0;
+        let history = [];
+
+        function action() {
+            if (!isFlying) {
+                startFlight();
+            } else {
+                cashOut();
+            }
+        }
+
+        function startFlight() {
+            isFlying = true;
+            currentMult = 1.0;
+            crashPoint = (Math.random() * 5 + 1).toFixed(2); // Рандомный взрыв от 1 до 6
+            document.getElementById('mainBtn').innerText = "ЗАБРАТЬ";
+            document.getElementById('mainBtn').classList.add('wait');
+            tick();
+        }
+
+        function tick() {
+            if (!isFlying) return;
+            currentMult += 0.01;
+            document.getElementById('mult').innerText = currentMult.toFixed(2) + "x";
+
+            if (currentMult >= crashPoint) {
+                gameOver(false);
+            } else {
+                setTimeout(tick, 100);
+            }
+        }
+
+        function cashOut() {
+            if (!isFlying) return;
+            gameOver(true);
+        }
+
+        function gameOver(isWin) {
+            isFlying = false;
+            let final = currentMult.toFixed(2);
+            
+            if (isWin) {
+                tg.sendData("win_" + final); // Отправляем боту множитель
+                alert("Вы забрали: " + final + "x!");
+            } else {
+                document.getElementById('mult').style.color = "#e74c3c";
+                document.getElementById('mult').innerText = "CRASH! " + final + "x";
+            }
+
+            // Добавляем в историю
+            history.unshift(final + "x");
+            if (history.length > 5) history.pop();
+            updateHistory();
+
+            setTimeout(() => {
+                document.getElementById('mainBtn').innerText = "СТАВКА 10 ⭐";
+                document.getElementById('mainBtn').classList.remove('wait');
+                document.getElementById('mult').style.color = "#f1c40f";
+                document.getElementById('mult').innerText = "1.00x";
+            }, 2000);
+        }
+
+        function updateHistory() {
+            let container = document.getElementById('history');
+            container.innerHTML = history.map(h => `<div class="h-item">${h}</div>`).join('');
         }
     </script>
 </body>
