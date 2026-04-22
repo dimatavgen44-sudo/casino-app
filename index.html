@@ -1,101 +1,87 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org"></script>
     <style>
-        body { background: #1a1a1a; color: white; text-align: center; font-family: sans-serif; overflow: hidden; }
-        canvas { background: #222; border-radius: 10px; width: 90%; height: 200px; margin-top: 20px; }
-        .multiplier { font-size: 48px; color: #f1c40f; margin: 20px 0; font-weight: bold; }
-        .btn { background: #27ae60; color: white; border: none; padding: 20px; border-radius: 15px; width: 80%; font-size: 20px; font-weight: bold; }
-        .btn.wait { background: #e67e22; }
-        .history { display: flex; justify-content: center; gap: 5px; margin-top: 15px; flex-wrap: wrap; }
-        .h-item { background: #444; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+        body { background: #0f0f0f; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
+        .header { display: flex; justify-content: space-between; padding: 15px; background: #1a1a1a; border-bottom: 1px solid #333; }
+        .balance-card { background: #262626; padding: 5px 12px; border-radius: 12px; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        .add-btn { background: #f1c40f; color: black; border: none; border-radius: 8px; width: 24px; height: 24px; font-weight: bold; cursor: pointer; }
+        
+        .screen { display: none; padding: 20px; height: 80vh; overflow-y: auto; }
+        .active { display: block; }
+
+        /* Меню */
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .menu-item { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; padding: 30px 10px; cursor: pointer; transition: 0.2s; }
+        .menu-item:active { transform: scale(0.95); background: #222; }
+        .icon { font-size: 40px; margin-bottom: 10px; }
+
+        /* Игры */
+        .game-title { color: #f1c40f; font-size: 24px; margin-bottom: 20px; }
+        .mult { font-size: 50px; font-weight: 800; margin: 30px 0; color: #fff; }
+        .btn-main { background: #f1c40f; color: black; border: none; width: 100%; padding: 18px; border-radius: 15px; font-size: 18px; font-weight: bold; }
+        .back-btn { margin-top: 30px; color: #888; background: none; border: none; text-decoration: underline; }
     </style>
 </head>
 <body>
-    <h1>🚀 ROCKET CRASH</h1>
-    <canvas id="gameCanvas"></canvas>
-    <div class="multiplier" id="mult">1.00x</div>
-    
-    <button id="mainBtn" class="btn" onclick="action()">СТАВКА 10 ⭐</button>
-    
-    <div class="history" id="history">
-        <!-- Сюда будет падать история полетов -->
+
+    <div class="header">
+        <div style="font-size: 20px; font-weight: 800;">STAR HUB</div>
+        <div class="balance-card">
+            <span id="user-bal">0</span> ⭐
+            <button class="add-btn" onclick="sendToBot('deposit')">+</button>
+        </div>
+    </div>
+
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div id="screen-menu" class="screen active">
+        <div class="menu-grid">
+            <div class="menu-item" onclick="openGame('rocket')"><div class="icon">🚀</div>РАКЕТА</div>
+            <div class="menu-item" onclick="openGame('mines')"><div class="icon">💣</div>МИНЫ</div>
+            <div class="menu-item" onclick="openGame('rolls')"><div class="icon">🎰</div>ROLLS</div>
+            <div class="menu-item" onclick="openGame('slots')"><div class="icon">🍒</div>СЛОТЫ</div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ИГРЫ (ОБЩИЙ) -->
+    <div id="screen-game" class="screen">
+        <h2 class="game-title" id="game-name">ИГРА</h2>
+        <div id="rocket-area">
+            <div class="mult" id="mult">1.00x</div>
+        </div>
+        <button class="btn-main" onclick="play()">СТАВКА 10 ⭐</button>
+        <br>
+        <button class="back-btn" onclick="showMenu()">← НАЗАД В МЕНЮ</button>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
+        tg.backgroundColor = '#0f0f0f';
 
-        let isFlying = false;
-        let currentMult = 1.0;
-        let crashPoint = 0;
-        let history = [];
-
-        function action() {
-            if (!isFlying) {
-                startFlight();
-            } else {
-                cashOut();
-            }
+        function sendToBot(action) {
+            tg.sendData(action);
         }
 
-        function startFlight() {
-            isFlying = true;
-            currentMult = 1.0;
-            crashPoint = (Math.random() * 5 + 1).toFixed(2); // Рандомный взрыв от 1 до 6
-            document.getElementById('mainBtn').innerText = "ЗАБРАТЬ";
-            document.getElementById('mainBtn').classList.add('wait');
-            tick();
+        function openGame(name) {
+            document.getElementById('screen-menu').classList.remove('active');
+            document.getElementById('screen-game').classList.add('active');
+            document.getElementById('game-name').innerText = name.toUpperCase();
         }
 
-        function tick() {
-            if (!isFlying) return;
-            currentMult += 0.01;
-            document.getElementById('mult').innerText = currentMult.toFixed(2) + "x";
-
-            if (currentMult >= crashPoint) {
-                gameOver(false);
-            } else {
-                setTimeout(tick, 100);
-            }
+        function showMenu() {
+            document.getElementById('screen-game').classList.remove('active');
+            document.getElementById('screen-menu').classList.add('active');
         }
 
-        function cashOut() {
-            if (!isFlying) return;
-            gameOver(true);
-        }
-
-        function gameOver(isWin) {
-            isFlying = false;
-            let final = currentMult.toFixed(2);
-            
-            if (isWin) {
-                tg.sendData("win_" + final); // Отправляем боту множитель
-                alert("Вы забрали: " + final + "x!");
-            } else {
-                document.getElementById('mult').style.color = "#e74c3c";
-                document.getElementById('mult').innerText = "CRASH! " + final + "x";
-            }
-
-            // Добавляем в историю
-            history.unshift(final + "x");
-            if (history.length > 5) history.pop();
-            updateHistory();
-
-            setTimeout(() => {
-                document.getElementById('mainBtn').innerText = "СТАВКА 10 ⭐";
-                document.getElementById('mainBtn').classList.remove('wait');
-                document.getElementById('mult').style.color = "#f1c40f";
-                document.getElementById('mult').innerText = "1.00x";
-            }, 2000);
-        }
-
-        function updateHistory() {
-            let container = document.getElementById('history');
-            container.innerHTML = history.map(h => `<div class="h-item">${h}</div>`).join('');
+        function play() {
+            // Отправляем боту название игры и ставку
+            let game = document.getElementById('game-name').innerText.toLowerCase();
+            tg.sendData("play_" + game + "_10");
         }
     </script>
 </body>
